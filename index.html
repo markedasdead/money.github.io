@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Мой Кошелек</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div id="app">
+        <!--авторизация-->
+        <section id="auth-screen" class="screen">
+            <div class="card login">
+                <p class="big centered">Вход</p>
+                <input type="password" id="login-pass" placeholder="Введите пароль (0000)">
+                <p id="auth-error" class="error hidden">Неправильный пароль</p>
+                <button id="login-btn">Войти</button>
+            </div>
+        </section>
+
+        <!--главная-->
+        <section id="main-screen" class="screen hidden">
+            <header>
+                <div class="header-row">
+                    <p class="big">Здравствуйте!</p>
+                    <button id="logout-btn" class="btn-small">Выйти</button>
+                </div>
+                <div class="balance">
+                    <p class="balance-label">Баланс:</p>
+                    <h1 id="balance-view">0 ₽</h1>
+                </div>
+            </header>
+
+            <main>
+                <div class="card transaction">
+                    <p class="card-title">Изменить баланс</p>
+                    <input type="number" id="amount-input" placeholder="Сумма (только цифры)">
+                    <select id="category-select"></select>
+                    <div class="row">
+                        <button id="add-income" class="btn-plus">Добавить</button>
+                        <button id="add-expense" class="btn-minus">Убавить</button>
+                    </div>
+                </div>
+
+                <div class="card accordion">
+                    <input type="text" id="new-cat-input" placeholder="Новая категория">
+                    <button id="add-cat-btn">Добавить категорию</button>
+                    <div class="divider"></div>
+                    <input type="password" id="new-pass-input" placeholder="Новый пароль">
+                    <button id="change-pass-btn">Сменить пароль</button>
+                </div>
+
+                
+
+                <div class="card">
+                    <p class="card-title">История</p>
+                    <div class="filters">
+                        <button data-period="day" class="period">День</button>
+                        <button data-period="week" class="period">Неделя</button>
+                        <button data-period="month" class="period">Месяц</button>
+                    </div>
+                    <div id="stats-list"></div>
+                    <p class="advice" id="advice-box"></p>
+                </div>
+            </main>
+        </section>
+    </div>
+    <script src="script.js"></script>
+</body>
+</html>
