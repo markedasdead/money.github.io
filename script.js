@@ -1,114 +1,153 @@
-let state = JSON.parse(localStorage.getItem('walletData')) || {
+const STORAGE_KEY = 'walletData';
+
+let state = JSON.parse(localStorage.getItem(STORAGE_KEY)) || {
     password: "0000",
     balance: 0,
     transactions: [],
     categories: ['Еда', 'Транспорт', 'Зарплата']
 };
 
-const save = () => localStorage.setItem('walletData', JSON.stringify(state));
-const format = (num) => new Intl.NumberFormat('ru-RU').format(num) + ' ₽';
+const elements = {
+    auth: document.getElementById('auth-screen'),
+    main: document.getElementById('main-screen'),
+    loginPass: document.getElementById('login-pass'),
+    error: document.getElementById('auth-error'),
+    balanceView: document.getElementById('balance-view'),
+    amount: document.getElementById('amount-input'),
+    catSelect: document.getElementById('category-select'),
+    newCat: document.getElementById('new-cat-input'),
+    newPass: document.getElementById('new-pass-input'),
+    statsList: document.getElementById('stats-list'),
+    advice: document.getElementById('advice-box')
+};
 
-const authScreen = document.getElementById('auth-screen');
-const mainScreen = document.getElementById('main-screen');
-const balanceView = document.getElementById('balance-view');
-const catSelect = document.getElementById('category-select');
+const save = () => {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+};
+
+const formatCurrency = (num) => {
+    return new Intl.NumberFormat('ru-RU').format(num) + ' ₽';
+};
 
 document.getElementById('login-btn').onclick = () => {
-    const passInput = document.getElementById('login-pass');
-    if (passInput.value === state.password) {
-        authScreen.classList.add('hidden');
-        mainScreen.classList.remove('hidden');
-        render();
+    if (elements.loginPass.value === state.password) {
+        elements.auth.classList.add('hidden');
+        elements.main.classList.remove('hidden');
+        renderApp();
     } else {
-        document.getElementById('auth-error').classList.remove('hidden');
-        passInput.value = '';
+        elements.error.classList.remove('hidden');
+        elements.loginPass.value = '';
     }
 };
 
-document.getElementById('logout-btn').onclick = () => location.reload();
+document.getElementById('logout-btn').onclick = () => {
+    location.reload();
+};
 
-const addTransaction = (type) => {
-    const amountInput = document.getElementById('amount-input');
-    const amount = parseFloat(amountInput.value);
+function handleTransaction(type) {
+    const value = parseFloat(elements.amount.value);
 
-    if (isNaN(amount) || amount <= 0) {
-        alert("Пожалуйста, введите корректное число");
+    if (isNaN(value) || value <= 0) {
+        alert("Введите корректную сумму");
         return;
     }
 
     state.transactions.push({
-        amount,
-        type,
-        category: catSelect.value,
+        amount: value,
+        type: type,
+        category: elements.catSelect.value,
         date: Date.now()
     });
 
-    state.balance += (type === 'in' ? amount : -amount);
-    amountInput.value = '';
+    state.balance += (type === 'in' ? value : -value);
+    elements.amount.value = '';
+    
     save();
-    render();
-};
+    renderApp();
+}
 
-document.getElementById('add-income').onclick = () => addTransaction('in');
-document.getElementById('add-expense').onclick = () => addTransaction('out');
+document.getElementById('add-income').onclick = () => handleTransaction('in');
+document.getElementById('add-expense').onclick = () => handleTransaction('out');
 
 document.getElementById('add-cat-btn').onclick = () => {
-    const input = document.getElementById('new-cat-input');
-    if (input.value.trim()) {
-        state.categories.push(input.value.trim());
-        input.value = '';
+    const name = elements.newCat.value.trim();
+    if (name) {
+        state.categories.push(name);
+        elements.newCat.value = '';
         save();
-        render();
+        renderApp();
     }
 };
 
 document.getElementById('change-pass-btn').onclick = () => {
-    const newPass = document.getElementById('new-pass-input').value;
-    if (newPass.length >= 4) {
-        state.password = newPass;
-        alert("Пароль изменен!");
+    const val = elements.newPass.value;
+    if (val.length >= 4) {
+        state.password = val;
+        elements.newPass.value = '';
         save();
+        alert("Пароль обновлен");
     } else {
-        alert("Пароль слишком короткий");
+        alert("Минимум 4 символа");
     }
 };
 
-function render() {
-    balanceView.textContent = format(state.balance);
-    balanceView.style.color = state.balance >= 0 ? '#2ecc71' : '#e74c3c';
+function renderApp() {
+    elements.balanceView.textContent = formatCurrency(state.balance);
+    elements.balanceView.style.color = state.balance >= 0 ? '#2ecc71' : '#e74c3c';
 
-    catSelect.innerHTML = state.categories.map(c => `<option value="${c}">${c}</option>`).join('');
+    elements.catSelect.innerHTML = state.categories
+        .map(c => `<option value="${c}">${c}</option>`)
+        .join('');
 
-    const adviceBox = document.getElementById('advice-box');
-    const expenses = state.transactions.filter(t => t.type === 'out');
-    adviceBox.innerHTML = expenses.length > 3 
-        ? "Рекомендация: Вы совершили много покупок. Попробуйте отложить 10% в резерв." 
-        : "";
+    const expenseCount = state.transactions.filter(t => t.type === 'out').length;
+    elements.advice.textContent = expenseCount > 3 
+        ? "Рекомендация: Слишком много трат, попробуйте экономить." 
+        : "Финансовое состояние стабильное.";
 
-    showStats('month');
+    updateHistory('month');
 }
 
-function showStats(period) {
+function updateHistory(period) {
     const now = Date.now();
-    const periods = {
-        day: 24 * 60 * 60 * 1000,
-        week: 7 * 24 * 60 * 60 * 1000,
-        month: 30 * 24 * 60 * 60 * 1000
+    const timeframes = {
+        day: 86400000,
+        week: 604800000,
+        month: 2592000000
     };
 
-    const filtered = state.transactions.filter(t => (now - t.date) < periods[period]);
-    const statsList = document.getElementById('stats-list');
-    
-    statsList.innerHTML = filtered.reverse().map(t => `
-        <div style="display:flex; justify-content:space-between; border-bottom:1px solid #eee; padding:5px 0;">
+    const filtered = state.transactions.filter(t => (now - t.date) < timeframes[period]);
+    const limit = 7;
+    const toShow = filtered.slice(-limit).reverse();
+
+    const createItemHtml = (t) => `
+        <div style="display:flex; justify-content:space-between; border-bottom:1px solid #eee; padding:8px 0;">
             <span>${t.category}</span>
-            <span style="color: ${t.type === 'in' ? 'green' : 'red'}">
-                ${t.type === 'in' ? '+' : '-'}${format(t.amount)}
+            <span class="amount" style="color: ${t.type === 'in' ? '#2ecc71' : '#e74c3c'}; font-weight: bold;">
+                ${t.type === 'in' ? '+' : '-'}${formatCurrency(t.amount)}
             </span>
         </div>
-    `).join('') || '<p>Нет данных за этот период</p>';
+    `;
+
+    elements.statsList.innerHTML = toShow.length 
+        ? toShow.map(createItemHtml).join('') 
+        : '<p class="centered">Истории пока нет</p>';
+
+    if (filtered.length > limit) {
+        const moreBtn = document.createElement('button');
+        moreBtn.textContent = 'Показать всё';
+        moreBtn.style.cssText = 'width:100%; background:none; color:#4a90e2; margin-top:10px; padding:10px;';
+        
+        moreBtn.onclick = () => {
+            elements.statsList.innerHTML = filtered.slice().reverse().map(createItemHtml).join('');
+        };
+        elements.statsList.appendChild(moreBtn);
+    }
 }
 
 document.querySelectorAll('[data-period]').forEach(btn => {
-    btn.onclick = () => showStats(btn.dataset.period);
+    btn.onclick = () => {
+        document.querySelectorAll('[data-period]').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        updateHistory(btn.dataset.period);
+    };
 });
